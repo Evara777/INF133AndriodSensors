@@ -1,23 +1,26 @@
 package com.example.tiltapp;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.os.Vibrator;
+import android.os.Environment;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+
+import java.io.IOException;
 
 public class MainActivity extends Activity
 {
   private String lastSound;
   private String storedValues;
   SensorEventListener listener;
+  MediaPlayer audio;
 
   private String getStringFromOrientation(double zAzi, double xPitch, double yRoll)
   {
@@ -68,25 +71,40 @@ public class MainActivity extends Activity
       @Override
       public void onSensorChanged(final SensorEvent sensorEvent)
       {
-        String position = getStringFromOrientation(sensorEvent.values[0],
+        final String position = getStringFromOrientation(sensorEvent.values[0],
                 sensorEvent.values[1], sensorEvent.values[2]);
         if(!position.equals("None") && !position.equals(lastSound))
         {
-          lastSound = position;
-          Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-          v.vibrate(50);
-        }
-        runOnUiThread(new Runnable()
-        {
-          @Override
-          public void run()
+          runOnUiThread(new Runnable()
           {
-            TextView text = (TextView) findViewById(R.id.editText);
-            text.setText(String.format("%s\n%.2f,\t%.2f,\t%.2f\n%s", lastSound,
-                    sensorEvent.values[0], sensorEvent.values[1], sensorEvent.values[2],
-                    storedValues));
-          }
-        });
+            @Override
+            public void run()
+            {
+              lastSound = position;
+              try
+              {
+                if(audio != null)
+                {
+                  audio.stop();
+                }
+                audio = new MediaPlayer();
+                audio.setDataSource(Environment.getExternalStorageDirectory().getPath() + "/tilt/" +
+                        lastSound + ".mp3");
+                audio.prepare();
+                audio.start();
+              }
+              catch(IOException e)
+              {
+                //Java is a beautiful language with many well thought out ideas!
+                e.printStackTrace();
+              }
+              TextView text = (TextView) findViewById(R.id.editText);
+              text.setText(String.format("%s\n%.2f,\t%.2f,\t%.2f\n%s", lastSound,
+                      sensorEvent.values[0], sensorEvent.values[1], sensorEvent.values[2],
+                      storedValues));
+            }
+          });
+        }
       }
 
       @Override
